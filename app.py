@@ -18,7 +18,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("⚡ RIOS 2.0 // QUANTUM EXECUTION ENGINE")
-st.caption("SYSTEM STATUS: ONLINE | MECHANICAL ICT & PRICE ACTION ENGINE")
+st.caption("SYSTEM STATUS: ONLINE | DUAL-ENTRY XAUUSD & INDEX ALGORITHM")
 
 api_key = st.secrets.get("GEMINI_API_KEY")
 if not api_key:
@@ -39,43 +39,53 @@ if htf_file and ltf_file:
     
     st.image([img_htf, img_ltf], caption=["HTF Bias Chart", "LTF Entry Chart"], width=350)
 
-    if st.button("CALCULATE HIGH-PROBABILITY EXECUTION"):
-        with st.spinner("ANALYZING CONFLUENCE & CALCULATING LIMIT ORDERS..."):
+    if st.button("RUN DUAL-ENTRY ANALYSIS"):
+        with st.spinner("CALCULATING AGGRESSIVE & CONSERVATIVE EXECUTION LEVELS..."):
             
             sys_inst = """
-            You are RIOS 2.0, an institutional-grade price action trading engine.
+            You are RIOS 2.0, an institutional-grade price action trading engine specializing in Gold (XAUUSD) and Stock Indices.
             
-            CORE PROFITABILITY RULES:
-            1. MULTI-TIMEFRAME CONFLUENCE: Read Image 1 (HTF) for market direction/trend and major Order Blocks. Read Image 2 (LTF) for Liquidity Sweeps, CHoCH, and entry triggers. NEVER trade against Image 1 trend.
-            2. ENTRY MANDATE: Only generate LIMIT ORDER setups placed directly at Fair Value Gaps (FVG) or extreme Liquidity Sweep points.
-            3. RISK PARAMETERS: Stop Loss must be 2-3 pips outside key swing wicks to clear market spread. Require minimum 1:3 Risk-to-Reward (R:R).
-            4. TP DYNAMICS: 
-               - TP1 (1:1.5 R:R): Take 50% partial profits and move SL to Breakeven.
-               - TP2 (1:3+ R:R): Targeted at major external liquidity pools (Equal Highs/Lows).
+            DUAL-ENTRY EXECUTION LOGIC:
+            1. MULTI-TIMEFRAME CONFLUENCE: Read Image 1 (HTF) for market trend/bias. Read Image 2 (LTF) for entry triggers. NEVER trade against Image 1 trend.
+            2. SOLVE MISSING TREND EXPANSIONS: Gold frequently leaves deep limit orders behind during strong expansions. You MUST provide TWO distinct entry options:
+               - AGGRESSIVE ENTRY: Shallow FVG / Immediate BOS Retest for high-momentum moves.
+               - CONSERVATIVE LIMIT: Deep FVG / Demand mitigation zone for deep pullbacks.
+            3. RISK PARAMETERS: Stop Loss must be 2.0-3.0 pts (20-30 pips on Gold) behind structural invalidation wicks. Minimum 1:2.5 Risk-to-Reward.
             """
 
             user_prompt = """
             Analyze both uploaded charts. Output the exact execution format below in Markdown:
 
             ## ⚡ RIOS 2.0 EXECUTION SIGNAL
-            **DIRECTION:** [🔵 BUY LIMIT / LONG or 🔴 SELL LIMIT / SHORT]
-            **HTF BIAS:** [Bullish / Bearish based on Chart 1]
+            **DIRECTION:** [🔵 BUY / LONG or 🔴 SELL / SHORT]
+            **MOMENTUM STATE:** [Strong Momentum Expansion / Ranging / Pullback Phase]
 
             ---
 
-            ### 🎯 MECHANICAL TRADE PARAMETERS
-            * **Limit Entry Zone:** [Exact Price / Range from Chart 2]
-            * **Stop Loss (SL):** [Exact Price Level + Buffer]
-            * **Take Profit 1 (TP1 - 50% Partial & BE):** [Exact Price Level]
-            * **Take Profit 2 (TP2 - Full Target):** [Exact Price Level]
-            * **Calculated R:R Ratio:** [e.g., 1:3.4]
+            ### 🎯 EXECUTION OPTIONS
+
+            #### ⚡ Option A: Aggressive Entry (High Momentum)
+            *Use this if price is expanding rapidly and unlikely to pull back deep.*
+            * **Entry Level:** [Shallow FVG / Immediate Retest Price]
+            * **Stop Loss (SL):** [Exact Price Level]
+            * **Take Profit 1 (TP1 - Partial & BE):** [Exact Price Level]
+            * **Take Profit 2 (TP2 - Target):** [Exact Price Level]
+            * **Calculated R:R:** [Ratio]
+
+            #### 🎯 Option B: Conservative Limit (Deep Pullback)
+            *Use this if price shows signs of heavy retracement into discount/premium zones.*
+            * **Limit Entry Level:** [Deep FVG / Extreme Order Block Price]
+            * **Stop Loss (SL):** [Exact Price Level]
+            * **Take Profit 1 (TP1 - Partial & BE):** [Exact Price Level]
+            * **Take Profit 2 (TP2 - Target):** [Exact Price Level]
+            * **Calculated R:R:** [Ratio]
 
             ---
 
-            ### 📊 LIQUIDITY & STRUCTURE BREAKDOWN
+            ### 📊 LIQUIDITY & STRUCTURE LOGIC
             * **HTF Structure:** Key liquidity or POI swept/mitigated on Chart 1.
             * **LTF Trigger:** Liquidity Sweep and CHoCH details on Chart 2.
-            * **Invalidation Condition:** Price movement that completely invalidates this structure.
+            * **Invalidation Condition:** Price movement that completely invalidates this trade idea.
             """
 
             try:
