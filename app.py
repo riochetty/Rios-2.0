@@ -1,126 +1,235 @@
 import streamlit as st
+import yfinance as yf
 import time
 from google import genai
 from google.genai import types
 from PIL import Image
 
-st.set_page_config(page_title="RIOS 2.0 // INSTITUTIONAL TERMINAL", layout="wide")
+# 1. Page Config
+st.set_page_config(
+    page_title="RIOS 2.0 // QUANTUM TERMINAL",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# Neon Cyberpunk Styling
+# 2. Sleek Glassmorphism CSS Styling
 st.markdown("""
     <style>
-    .main { background-color: #0b0f19; color: #00f0ff; }
-    h1 { color: #00f0ff !important; font-family: 'Courier New', monospace; text-shadow: 0 0 12px #00f0ff; }
-    .stButton>button {
-        background: linear-gradient(135deg, #00f0ff 0%, #7000ff 100%);
-        color: #ffffff !important; font-weight: bold; border: none; border-radius: 8px; padding: 14px 28px;
-        box-shadow: 0 0 18px rgba(0, 240, 255, 0.4);
-        transition: all 0.3s ease;
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'JetBrains Mono', monospace;
+        background-color: #080B11 !important;
+        color: #E2E8F0;
     }
+    
+    .stApp {
+        background: radial-gradient(circle at 50% 0%, #10192D 0%, #080B11 75%);
+    }
+
+    /* Header Glow */
+    .title-text {
+        font-size: 2.4rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, #00F0FF, #7000FF);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 25px rgba(0, 240, 255, 0.3);
+        margin-bottom: 0px;
+    }
+    
+    .sub-text {
+        font-size: 0.85rem;
+        color: #64748B;
+        letter-spacing: 2px;
+        margin-bottom: 25px;
+    }
+
+    /* Glassmorphic Metric Cards */
+    .glass-card {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(0, 240, 255, 0.2);
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    
+    .price-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #00F0FF;
+        text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+    }
+
+    /* Custom Streamlit Button Styling */
+    .stButton>button {
+        width: 100%;
+        background: linear-gradient(135deg, #00F0FF 0%, #7000FF 100%);
+        color: #FFFFFF !important;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        font-size: 1rem;
+        border: none;
+        border-radius: 10px;
+        padding: 16px 24px;
+        box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+        transition: all 0.3s ease-in-out;
+    }
+    
     .stButton>button:hover {
-        box-shadow: 0 0 30px rgba(112, 0, 255, 0.8);
-        transform: scale(1.02);
+        box-shadow: 0 0 35px rgba(112, 0, 255, 0.8);
+        transform: translateY(-2px);
+    }
+
+    /* File Uploader Custom Styling */
+    [data-testid="stFileUploader"] {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px dashed rgba(0, 240, 255, 0.3);
+        border-radius: 12px;
+        padding: 10px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("⚡ RIOS 2.0 // QUANTUM TERMINAL")
-st.caption("SYSTEM STATUS: ACTIVE | XAUUSD • US30 • NAS100 INSTITUTIONAL ENGINE")
+# 3. Header & Branding
+st.markdown("<div class='title-text'>⚡ RIOS 2.0 // QUANTUM EXECUTION TERMINAL</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-text'>INSTITUTIONAL ICT ORDER FLOW ENGINE • MULTI-ASSET PRECISION SYSTEM</div>", unsafe_allow_html=True)
 
 api_key = st.secrets.get("GEMINI_API_KEY")
 if not api_key:
-    st.error("SYSTEM ERROR: GEMINI_API_KEY missing from Streamlit Secrets!")
+    st.error("SYSTEM CRITICAL: GEMINI_API_KEY is missing from Streamlit Secrets!")
     st.stop()
 
 client = genai.Client(api_key=api_key)
 
-# Top Bar Selection
-col_asset, col_session = st.columns(2)
+ASSET_MAP = {
+    "🥇 XAUUSD (Gold)": "GC=F",
+    "📊 US30 (Dow Jones)": "^DJI",
+    "💻 NAS100 (Nasdaq)": "^IXIC"
+}
+
+# 4. Top Control Bar
+col_asset, col_sess, col_live = st.columns([2, 2, 2])
 
 with col_asset:
-    asset_choice = st.selectbox(
-        "SELECT TRADING ASSET:",
-        ["🥇 XAUUSD (Gold)", "📊 US30 (Dow Jones)", "💻 NAS100 (Nasdaq)"]
-    )
+    asset_choice = st.selectbox("SELECT TARGET ASSET:", list(ASSET_MAP.keys()))
 
-with col_session:
+with col_sess:
     session_choice = st.selectbox(
-        "SELECT CURRENT TRADING SESSION / KILLZONE:",
+        "SESSION / KILLZONE:",
         ["⚡ London Open Killzone", "🔥 New York Open (AM Session)", "🌆 New York PM / Asian Session"]
     )
 
+ticker_symbol = ASSET_MAP[asset_choice]
+
+def get_live_price(symbol):
+    try:
+        data = yf.Ticker(symbol).history(period="1d", interval="1m")
+        if not data.empty:
+            return round(data['Close'].iloc[-1], 2)
+    except:
+        return None
+    return None
+
+live_price = get_live_price(ticker_symbol)
+
+with col_live:
+    price_display = f"{live_price}" if live_price else "SYNCING..."
+    st.markdown(
+        f"""
+        <div class='glass-card'>
+            <div style='font-size: 0.75rem; color: #94A3B8;'>LIVE TICKER FEED</div>
+            <div class='price-value'>{price_display}</div>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# 5. Dual Chart Upload Section
 col1, col2 = st.columns(2)
 with col1:
-    htf_file = st.file_uploader("1. HTF CHART (1H / 4H - Structural Bias)", type=["png", "jpg", "jpeg"])
+    htf_file = st.file_uploader("1. HTF BIAS CHART (1H / 4H Structure)", type=["png", "jpg", "jpeg"])
 with col2:
-    ltf_file = st.file_uploader("2. LTF CHART (1m / 15m - Trigger & Sweeps)", type=["png", "jpg", "jpeg"])
+    ltf_file = st.file_uploader("2. LTF TRIGGER CHART (1m / 15m Execution)", type=["png", "jpg", "jpeg"])
 
 if htf_file and ltf_file:
     img_htf = Image.open(htf_file)
     img_ltf = Image.open(ltf_file)
     
-    st.image([img_htf, img_ltf], caption=["HTF Structural Bias", "LTF Execution Trigger"], width=350)
+    st.image([img_htf, img_ltf], caption=["Higher Timeframe Bias", "Lower Timeframe Execution Trigger"], use_container_width=True)
 
-    if st.button("RUN QUANTUM SIGNAL ENGINE"):
-        with st.spinner("ANALYZING ICT LIQUIDITY, ORDER BLOCKS & SPREAD BUFFERS..."):
+    if st.button("RUN QUANTUM PRECISION ANALYSIS"):
+        with st.spinner("CALCULATING OPTIMAL TRADE ENTRIES (OTE) & LIQUIDITY POOLS..."):
             
             sys_inst = f"""
-            You are RIOS 2.0, an elite institutional price action algorithm designed for {asset_choice}.
+            You are RIOS 2.0, the world's most precise institutional trading execution engine. You specialize in ICT concepts (Buyside/Sellside Liquidity Sweeps, Change of Character, Break of Structure, Fair Value Gaps, and Order Blocks) for {asset_choice}.
 
-            ASSET SPECIFIC BUFFER RULES:
-            - If XAUUSD: Apply 2.0-3.0 point (20-30 pip) SL buffers outside key wicks.
-            - If US30: Apply 25-40 point SL buffers to handle high volatility spread expansion.
-            - If NAS100: Apply 15-25 point SL buffers to survive market maker wick sweeps.
+            REAL-TIME MARKET CONTEXT:
+            - Asset: {asset_choice}
+            - Session Context: {session_choice}
+            - Live Market Reference Price: {live_price if live_price else 'Refer to chart scale'}
 
-            CORE EXECUTION MANDATES:
-            1. MULTI-TIMEFRAME CONFLUENCE: Read Chart 1 (HTF) for overarching order flow and major Liquidity Pools/Order Blocks. Read Chart 2 (LTF) for Liquidity Sweeps, CHoCH, and entry triggers. NEVER trade against Chart 1 trend.
-            2. SESSION CONTEXT: Current context is {session_choice}. Adjust aggressiveness accordingly.
-            3. DUAL-ENTRY PARAMETERS:
-               - OPTION A (Aggressive): Shallow FVG or Immediate Retest zone to capture explosive expansions.
-               - OPTION B (Conservative Limit): Deep Liquidity Sweep / Extreme Discount Demand or Premium Supply zone for maximum Risk-to-Reward.
-            4. MINIMUM RISK-TO-REWARD: Strictly calculate setups with a minimum of 1:2.5 R:R to 1:4+ R:R.
+            STRICT EXECUTION PROTOCOL:
+            1. MULTI-TIMEFRAME ALIGNMENT:
+               - Read Chart 1 (HTF) for core narrative, dominant trend, and unmitigated Supply/Demand POIs.
+               - Read Chart 2 (LTF) for recent Liquidity Sweeps (BSL/SSL), CHoCH, and entry triggers.
+               - NEVER generate a signal that contradicts the HTF Chart 1 trend.
+
+            2. ASSET SPECIFIC SPREAD & BUFFER RULES:
+               - Gold (XAUUSD): 2.0 - 3.0 point (20-30 pip) buffer beyond invalidation wicks.
+               - US30: 25 - 40 point buffer to account for index volatility.
+               - NAS100: 15 - 25 point buffer.
+
+            3. DUAL-ENTRY ARCHITECTURE:
+               - OPTION A (Aggressive Retest): Targets nearest 5M/15M FVG or immediate BOS retest for high-momentum moves.
+               - OPTION B (Conservative OTE Limit): Targets deep discount/premium liquidity sweeps or extreme Order Blocks (0.618 - 0.79 Fibonacci OTE levels) for high R:R setups.
+
+            4. MANDATORY RISK METRICS: Minimum 1:3 Risk-to-Reward ratio. Always provide explicit numerical values for Entry, Stop Loss, TP1 (Partial & Breakeven), and TP2 (Final Target).
             """
 
             user_prompt = f"""
-            Analyze both uploaded charts for {asset_choice} during {session_choice}. 
-            Format the response strictly in Markdown as shown below:
+            Analyze both uploaded charts. Format the output in clean Markdown using this structure:
 
-            ## ⚡ RIOS 2.0 EXECUTION SIGNAL // [{asset_choice}]
+            ## ⚡ RIOS 2.0 PRECISION SIGNAL // [{asset_choice}]
             **DIRECTION:** [🔵 BUY / LONG or 🔴 SELL / SHORT]
-            **SESSION VOLATILITY:** [High Volatility / Moderate / Ranging]
+            **LIVE REFERENCE PRICE:** {live_price if live_price else 'N/A'}
+            **MARKET STRUCTURE STATE:** [Bullish Expansion / Bearish Expansion / Liquidity Sweep Phase]
 
             ---
 
             ### 🎯 EXECUTION OPTIONS
 
             #### ⚡ Option A: Aggressive Entry (High Momentum)
-            *Best for aggressive momentum expansions to prevent missing the trade.*
-            * **Entry Zone:** [Price / Narrow Range]
+            *Use when price is expanding rapidly and unlikely to offer deep pullbacks.*
+            * **Entry Zone:** [Price Level / Narrow Range]
             * **Stop Loss (SL):** [Exact Price Level + Asset Buffer]
             * **Take Profit 1 (TP1 - Partial & BE):** [Exact Price Level]
             * **Take Profit 2 (TP2 - Target):** [Exact Price Level]
-            * **Calculated R:R:** [e.g., 1:2.8]
+            * **Calculated R:R:** [e.g., 1:3.2]
 
-            #### 🎯 Option B: Conservative Limit (Deep Pullback)
-            *Best for deep discount/premium retracements into key POIs.*
+            #### 🎯 Option B: Conservative OTE Limit (Deep Pullback)
+            *Use when waiting for a full liquidity sweep into discount/premium Order Blocks.*
             * **Limit Entry Zone:** [Exact Price Level]
             * **Stop Loss (SL):** [Exact Price Level + Asset Buffer]
             * **Take Profit 1 (TP1 - Partial & BE):** [Exact Price Level]
             * **Take Profit 2 (TP2 - Target):** [Exact Price Level]
-            * **Calculated R:R:** [e.g., 1:3.8]
+            * **Calculated R:R:** [e.g., 1:4.5]
 
             ---
 
-            ### 📊 LIQUIDITY & STRUCTURE BREAKDOWN
-            * **HTF Liquidity / POI:** Sweeps or mitigation levels identified on Chart 1.
-            * **LTF Trigger:** CHoCH/BOS details and swept liquidity pools on Chart 2.
-            * **Invalidation Condition:** Exact price movement that invalidates this setup.
+            ### 📊 INSTITUTIONAL ORDER FLOW BREAKDOWN
+            * **HTF Narrative (Chart 1):** Primary POI mitigated, dominant trend direction, and main target.
+            * **LTF Trigger (Chart 2):** Exact Liquidity Sweep details (BSL/SSL taken) and CHoCH confirmation.
+            * **Structural Invalidation:** The exact price level where this setup becomes invalid.
             """
 
-            # Auto-Retry Loop for 503 Server Demand Spikes
             max_retries = 3
-            success = False
-            
             for attempt in range(max_retries):
                 try:
                     response = client.models.generate_content(
@@ -132,11 +241,10 @@ if htf_file and ltf_file:
                         )
                     )
                     st.markdown(response.text)
-                    success = True
                     break
                 except Exception as e:
                     if "503" in str(e) and attempt < max_retries - 1:
-                        time.sleep(2)  # Wait 2 seconds before retrying
+                        time.sleep(2)
                         continue
                     else:
                         st.error(f"Execution Error: {e}")
