@@ -1,5 +1,4 @@
 import streamlit as st
-import yfinance as yf
 import time
 from google import genai
 from google.genai import types
@@ -13,7 +12,14 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. Sleek Glassmorphism CSS Styling
+# Optional yfinance import with fallback
+try:
+    import yfinance as yf
+    YFINANCE_AVAILABLE = True
+except ImportError:
+    YFINANCE_AVAILABLE = False
+
+# 2. Glassmorphism CSS Styling
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
@@ -28,9 +34,8 @@ st.markdown("""
         background: radial-gradient(circle at 50% 0%, #10192D 0%, #080B11 75%);
     }
 
-    /* Header Glow */
     .title-text {
-        font-size: 2.4rem;
+        font-size: 2.2rem;
         font-weight: 700;
         background: linear-gradient(90deg, #00F0FF, #7000FF);
         -webkit-background-clip: text;
@@ -40,32 +45,30 @@ st.markdown("""
     }
     
     .sub-text {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: #64748B;
         letter-spacing: 2px;
-        margin-bottom: 25px;
+        margin-bottom: 20px;
     }
 
-    /* Glassmorphic Metric Cards */
     .glass-card {
         background: rgba(15, 23, 42, 0.6);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(0, 240, 255, 0.2);
         border-radius: 12px;
-        padding: 15px;
+        padding: 12px;
         text-align: center;
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     }
     
     .price-value {
-        font-size: 1.8rem;
+        font-size: 1.6rem;
         font-weight: 700;
         color: #00F0FF;
         text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
     }
 
-    /* Custom Streamlit Button Styling */
     .stButton>button {
         width: 100%;
         background: linear-gradient(135deg, #00F0FF 0%, #7000FF 100%);
@@ -85,7 +88,6 @@ st.markdown("""
         transform: translateY(-2px);
     }
 
-    /* File Uploader Custom Styling */
     [data-testid="stFileUploader"] {
         background: rgba(15, 23, 42, 0.4);
         border: 1px dashed rgba(0, 240, 255, 0.3);
@@ -95,13 +97,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Header & Branding
-st.markdown("<div class='title-text'>⚡ RIOS 2.0 // QUANTUM EXECUTION TERMINAL</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-text'>INSTITUTIONAL ICT ORDER FLOW ENGINE • MULTI-ASSET PRECISION SYSTEM</div>", unsafe_allow_html=True)
+# 3. Header
+st.markdown("<div class='title-text'>⚡ RIOS 2.0 // QUANTUM TERMINAL</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-text'>INSTITUTIONAL ICT EXECUTION ENGINE • XAUUSD • US30 • NAS100</div>", unsafe_allow_html=True)
 
 api_key = st.secrets.get("GEMINI_API_KEY")
 if not api_key:
-    st.error("SYSTEM CRITICAL: GEMINI_API_KEY is missing from Streamlit Secrets!")
+    st.error("SYSTEM CRITICAL: GEMINI_API_KEY missing from Streamlit Secrets!")
     st.stop()
 
 client = genai.Client(api_key=api_key)
@@ -113,10 +115,10 @@ ASSET_MAP = {
 }
 
 # 4. Top Control Bar
-col_asset, col_sess, col_live = st.columns([2, 2, 2])
+col_asset, col_sess, col_price_input = st.columns([2, 2, 2])
 
 with col_asset:
-    asset_choice = st.selectbox("SELECT TARGET ASSET:", list(ASSET_MAP.keys()))
+    asset_choice = st.selectbox("TARGET ASSET:", list(ASSET_MAP.keys()))
 
 with col_sess:
     session_choice = st.selectbox(
@@ -126,32 +128,37 @@ with col_sess:
 
 ticker_symbol = ASSET_MAP[asset_choice]
 
-def get_live_price(symbol):
-    try:
-        data = yf.Ticker(symbol).history(period="1d", interval="1m")
-        if not data.empty:
-            return round(data['Close'].iloc[-1], 2)
-    except:
-        return None
+def fetch_live_price(symbol):
+    if YFINANCE_AVAILABLE:
+        try:
+            data = yf.Ticker(symbol).history(period="1d", interval="1m")
+            if not data.empty:
+                return round(data['Close'].iloc[-1], 2)
+        except:
+            return None
     return None
 
-live_price = get_live_price(ticker_symbol)
+auto_price = fetch_live_price(ticker_symbol)
 
-with col_live:
-    price_display = f"{live_price}" if live_price else "SYNCING..."
-    st.markdown(
-        f"""
-        <div class='glass-card'>
-            <div style='font-size: 0.75rem; color: #94A3B8;'>LIVE TICKER FEED</div>
-            <div class='price-value'>{price_display}</div>
-        </div>
-        """, 
-        unsafe_allow_html=True
-    )
+with col_price_input:
+    if auto_price:
+        st.markdown(
+            f"""
+            <div class='glass-card'>
+                <div style='font-size: 0.75rem; color: #94A3B8;'>AUTO LIVE PRICE</div>
+                <div class='price-value'>{auto_price}</div>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+        live_price_str = str(auto_price)
+    else:
+        manual_price = st.text_input("CURRENT LIVE PRICE (Optional):", value="", placeholder="e.g., 2650.50")
+        live_price_str = manual_price if manual_price else "Refer to uploaded chart price scale"
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 5. Dual Chart Upload Section
+# 5. Dual Chart Upload
 col1, col2 = st.columns(2)
 with col1:
     htf_file = st.file_uploader("1. HTF BIAS CHART (1H / 4H Structure)", type=["png", "jpg", "jpeg"])
@@ -168,37 +175,37 @@ if htf_file and ltf_file:
         with st.spinner("CALCULATING OPTIMAL TRADE ENTRIES (OTE) & LIQUIDITY POOLS..."):
             
             sys_inst = f"""
-            You are RIOS 2.0, the world's most precise institutional trading execution engine. You specialize in ICT concepts (Buyside/Sellside Liquidity Sweeps, Change of Character, Break of Structure, Fair Value Gaps, and Order Blocks) for {asset_choice}.
+            You are RIOS 2.0, an institutional trading execution engine specializing in ICT concepts (BSL/SSL Sweeps, CHoCH, BOS, Fair Value Gaps, and Order Blocks) for {asset_choice}.
 
             REAL-TIME MARKET CONTEXT:
             - Asset: {asset_choice}
             - Session Context: {session_choice}
-            - Live Market Reference Price: {live_price if live_price else 'Refer to chart scale'}
+            - Current Price Reference: {live_price_str}
 
-            STRICT EXECUTION PROTOCOL:
+            EXECUTION PROTOCOL:
             1. MULTI-TIMEFRAME ALIGNMENT:
-               - Read Chart 1 (HTF) for core narrative, dominant trend, and unmitigated Supply/Demand POIs.
-               - Read Chart 2 (LTF) for recent Liquidity Sweeps (BSL/SSL), CHoCH, and entry triggers.
-               - NEVER generate a signal that contradicts the HTF Chart 1 trend.
+               - Read Chart 1 (HTF) for dominant trend and unmitigated POIs.
+               - Read Chart 2 (LTF) for recent Liquidity Sweeps, CHoCH, and entry triggers.
+               - NEVER generate a signal that contradicts Chart 1 trend.
 
-            2. ASSET SPECIFIC SPREAD & BUFFER RULES:
-               - Gold (XAUUSD): 2.0 - 3.0 point (20-30 pip) buffer beyond invalidation wicks.
-               - US30: 25 - 40 point buffer to account for index volatility.
+            2. SPREAD BUFFERS:
+               - Gold (XAUUSD): 2.0 - 3.0 point buffer outside invalidation wicks.
+               - US30: 25 - 40 point buffer.
                - NAS100: 15 - 25 point buffer.
 
             3. DUAL-ENTRY ARCHITECTURE:
                - OPTION A (Aggressive Retest): Targets nearest 5M/15M FVG or immediate BOS retest for high-momentum moves.
                - OPTION B (Conservative OTE Limit): Targets deep discount/premium liquidity sweeps or extreme Order Blocks (0.618 - 0.79 Fibonacci OTE levels) for high R:R setups.
 
-            4. MANDATORY RISK METRICS: Minimum 1:3 Risk-to-Reward ratio. Always provide explicit numerical values for Entry, Stop Loss, TP1 (Partial & Breakeven), and TP2 (Final Target).
+            4. MANDATORY METRICS: Minimum 1:3 Risk-to-Reward ratio. Provide explicit numerical values for Entry, Stop Loss, TP1 (Partial & BE), and TP2 (Final Target).
             """
 
             user_prompt = f"""
-            Analyze both uploaded charts. Format the output in clean Markdown using this structure:
+            Analyze both uploaded charts. Format the output in Markdown:
 
             ## ⚡ RIOS 2.0 PRECISION SIGNAL // [{asset_choice}]
             **DIRECTION:** [🔵 BUY / LONG or 🔴 SELL / SHORT]
-            **LIVE REFERENCE PRICE:** {live_price if live_price else 'N/A'}
+            **PRICE REFERENCE:** {live_price_str}
             **MARKET STRUCTURE STATE:** [Bullish Expansion / Bearish Expansion / Liquidity Sweep Phase]
 
             ---
@@ -208,7 +215,7 @@ if htf_file and ltf_file:
             #### ⚡ Option A: Aggressive Entry (High Momentum)
             *Use when price is expanding rapidly and unlikely to offer deep pullbacks.*
             * **Entry Zone:** [Price Level / Narrow Range]
-            * **Stop Loss (SL):** [Exact Price Level + Asset Buffer]
+            * **Stop Loss (SL):** [Exact Price Level + Buffer]
             * **Take Profit 1 (TP1 - Partial & BE):** [Exact Price Level]
             * **Take Profit 2 (TP2 - Target):** [Exact Price Level]
             * **Calculated R:R:** [e.g., 1:3.2]
@@ -216,7 +223,7 @@ if htf_file and ltf_file:
             #### 🎯 Option B: Conservative OTE Limit (Deep Pullback)
             *Use when waiting for a full liquidity sweep into discount/premium Order Blocks.*
             * **Limit Entry Zone:** [Exact Price Level]
-            * **Stop Loss (SL):** [Exact Price Level + Asset Buffer]
+            * **Stop Loss (SL):** [Exact Price Level + Buffer]
             * **Take Profit 1 (TP1 - Partial & BE):** [Exact Price Level]
             * **Take Profit 2 (TP2 - Target):** [Exact Price Level]
             * **Calculated R:R:** [e.g., 1:4.5]
