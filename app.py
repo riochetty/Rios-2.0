@@ -19,7 +19,7 @@ try:
 except ImportError:
     YFINANCE_AVAILABLE = False
 
-# 2. Glassmorphism CSS Styling
+# 2. Sleek Glassmorphism CSS Styling
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
@@ -97,7 +97,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Header
+# 3. Header & Branding
 st.markdown("<div class='title-text'>⚡ RIOS 2.0 // QUANTUM TERMINAL</div>", unsafe_allow_html=True)
 st.markdown("<div class='sub-text'>INSTITUTIONAL ICT EXECUTION ENGINE • XAUUSD • US30 • NAS100</div>", unsafe_allow_html=True)
 
@@ -114,7 +114,7 @@ ASSET_MAP = {
     "💻 NAS100 (Nasdaq)": "^IXIC"
 }
 
-# 4. Top Control Bar
+# 4. Top Control Bar & Live Price Sync
 col_asset, col_sess, col_price_input = st.columns([2, 2, 2])
 
 with col_asset:
@@ -172,68 +172,61 @@ if htf_file and ltf_file:
     st.image([img_htf, img_ltf], caption=["Higher Timeframe Bias", "Lower Timeframe Execution Trigger"], use_container_width=True)
 
     if st.button("RUN QUANTUM PRECISION ANALYSIS"):
-        with st.spinner("CALCULATING OPTIMAL TRADE ENTRIES (OTE) & LIQUIDITY POOLS..."):
+        with st.spinner("ANALYZING ICT CONFLUENCE, KILLZONES & SPREAD BUFFERS..."):
             
             sys_inst = f"""
-            You are RIOS 2.0, an institutional trading execution engine specializing in ICT concepts (BSL/SSL Sweeps, CHoCH, BOS, Fair Value Gaps, and Order Blocks) for {asset_choice}.
+            You are RIOS 2.0, an algorithmic institutional price action engine enforcing ICT execution rules for {asset_choice}.
 
             REAL-TIME MARKET CONTEXT:
             - Asset: {asset_choice}
             - Session Context: {session_choice}
-            - Current Price Reference: {live_price_str}
+            - Price Reference: {live_price_str}
 
-            EXECUTION PROTOCOL:
-            1. MULTI-TIMEFRAME ALIGNMENT:
-               - Read Chart 1 (HTF) for dominant trend and unmitigated POIs.
-               - Read Chart 2 (LTF) for recent Liquidity Sweeps, CHoCH, and entry triggers.
-               - NEVER generate a signal that contradicts Chart 1 trend.
-
-            2. SPREAD BUFFERS:
-               - Gold (XAUUSD): 2.0 - 3.0 point buffer outside invalidation wicks.
-               - US30: 25 - 40 point buffer.
-               - NAS100: 15 - 25 point buffer.
-
-            3. DUAL-ENTRY ARCHITECTURE:
-               - OPTION A (Aggressive Retest): Targets nearest 5M/15M FVG or immediate BOS retest for high-momentum moves.
-               - OPTION B (Conservative OTE Limit): Targets deep discount/premium liquidity sweeps or extreme Order Blocks (0.618 - 0.79 Fibonacci OTE levels) for high R:R setups.
-
-            4. MANDATORY METRICS: Minimum 1:3 Risk-to-Reward ratio. Provide explicit numerical values for Entry, Stop Loss, TP1 (Partial & BE), and TP2 (Final Target).
+            CORE PROFITABILITY ALGORITHM:
+            1. HIGH-PROBABILITY CONFLUENCE MANDATE: Only generate signals if there is an explicit Higher Timeframe (1H/4H) Order Block alignment combined with a Lower Timeframe (1M/5M) Liquidity Sweep (BSL/SSL) and Fair Value Gap (FVG).
+            2. SPREAD & SL PROTECTION: Add exact buffers behind invalidation wicks to eliminate spread hunts:
+               - XAUUSD: 20-30 pips (2.0-3.0 pts)
+               - US30: 30-40 pts
+               - NAS100: 20-30 pts
+            3. STRICT RISK-TO-REWARD: Hardcode a minimum 1:3 R:R ratio requirement. Reject low-yield setups.
+            4. KILLZONE VALIDATION: Adjust entry aggressiveness based on {session_choice}.
             """
 
             user_prompt = f"""
-            Analyze both uploaded charts. Format the output in Markdown:
+            Analyze both uploaded charts. Output the execution signal strictly in Markdown:
 
-            ## ⚡ RIOS 2.0 PRECISION SIGNAL // [{asset_choice}]
+            ## ⚡ RIOS 2.0 QUANTUM SIGNAL // [{asset_choice}]
             **DIRECTION:** [🔵 BUY / LONG or 🔴 SELL / SHORT]
+            **KILLZONE STATUS:** {session_choice}
             **PRICE REFERENCE:** {live_price_str}
-            **MARKET STRUCTURE STATE:** [Bullish Expansion / Bearish Expansion / Liquidity Sweep Phase]
+            **TRADE CONFLUENCE SCORE:** [e.g., 9.5/10]
 
             ---
 
-            ### 🎯 EXECUTION OPTIONS
+            ### 🎯 OPTIMAL EXECUTION PARAMETERS
 
-            #### ⚡ Option A: Aggressive Entry (High Momentum)
-            *Use when price is expanding rapidly and unlikely to offer deep pullbacks.*
-            * **Entry Zone:** [Price Level / Narrow Range]
-            * **Stop Loss (SL):** [Exact Price Level + Buffer]
-            * **Take Profit 1 (TP1 - Partial & BE):** [Exact Price Level]
-            * **Take Profit 2 (TP2 - Target):** [Exact Price Level]
-            * **Calculated R:R:** [e.g., 1:3.2]
+            #### ⚡ Option A: Aggressive Expansion Entry
+            *Use during fast momentum when price respects shallow FVGs/BOS retests.*
+            * **Entry Zone:** [Exact Price / Range]
+            * **Stop Loss (SL):** [Exact Price Level + Spread Buffer]
+            * **Take Profit 1 (50% Partial + SL to BE):** [Exact Price Level]
+            * **Take Profit 2 (Full Target - Liquidity Pool):** [Exact Price Level]
+            * **Calculated R:R Ratio:** [Calculated Value, e.g., 1:3.2]
 
-            #### 🎯 Option B: Conservative OTE Limit (Deep Pullback)
-            *Use when waiting for a full liquidity sweep into discount/premium Order Blocks.*
+            #### 🎯 Option B: Conservative Deep Limit (Discount/Premium OTE)
+            *Use when waiting for full deep retracement into HTF POIs.*
             * **Limit Entry Zone:** [Exact Price Level]
-            * **Stop Loss (SL):** [Exact Price Level + Buffer]
-            * **Take Profit 1 (TP1 - Partial & BE):** [Exact Price Level]
-            * **Take Profit 2 (TP2 - Target):** [Exact Price Level]
-            * **Calculated R:R:** [e.g., 1:4.5]
+            * **Stop Loss (SL):** [Exact Price Level + Spread Buffer]
+            * **Take Profit 1 (50% Partial + SL to BE):** [Exact Price Level]
+            * **Take Profit 2 (Full Target):** [Exact Price Level]
+            * **Calculated R:R Ratio:** [Calculated Value, e.g., 1:4.5]
 
             ---
 
-            ### 📊 INSTITUTIONAL ORDER FLOW BREAKDOWN
-            * **HTF Narrative (Chart 1):** Primary POI mitigated, dominant trend direction, and main target.
-            * **LTF Trigger (Chart 2):** Exact Liquidity Sweep details (BSL/SSL taken) and CHoCH confirmation.
-            * **Structural Invalidation:** The exact price level where this setup becomes invalid.
+            ### 📊 INSTITUTIONAL MECHANICS BREAKDOWN
+            * **HTF Liquidity Pool Targeted (Chart 1):** [External BSL/SSL or Unmitigated FVG]
+            * **LTF Trigger (Chart 2):** [Liquidity Sweep & CHoCH confirmation details]
+            * **Invalidation Level:** [Price level where the setup is invalidated]
             """
 
             max_retries = 3
