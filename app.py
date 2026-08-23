@@ -2,6 +2,7 @@ import streamlit as st
 import time
 import sqlite3
 import pandas as pd
+import plotly.express as px
 from google import genai
 from google.genai import types
 from PIL import Image
@@ -21,7 +22,7 @@ try:
 except ImportError:
     YFINANCE_AVAILABLE = False
 
-# 2. Database Setup (SQLite for Trade Logging)
+# 2. Database Setup (SQLite)
 def init_db():
     conn = sqlite3.connect("trade_history.db")
     c = conn.cursor()
@@ -61,21 +62,9 @@ def update_trade_status(trade_id, status):
 
 def get_trades_df():
     conn = sqlite3.connect("trade_history.db")
-    df = pd.read_sql_query('SELECT * FROM trades ORDER BY id DESC', conn)
+    df = pd.read_sql_query('SELECT * FROM trades ORDER BY id ASC', conn)
     conn.close()
     return df
-
-# Initialize Session State for Auto-Fill
-if 'log_asset' not in st.session_state:
-    st.session_state.log_asset = "XAUUSD"
-if 'log_dir' not in st.session_state:
-    st.session_state.log_dir = "BUY"
-if 'log_entry' not in st.session_state:
-    st.session_state.log_entry = ""
-if 'log_sl' not in st.session_state:
-    st.session_state.log_sl = ""
-if 'log_tp' not in st.session_state:
-    st.session_state.log_tp = ""
 
 # 3. CSS Styling
 st.markdown("""
@@ -143,9 +132,9 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 4. Header & Win-Rate Sidebar
+# 4. Header & Sidebar Analytics
 st.markdown("<div class='title-text'>⚡ RIOS 2.0 // QUANTUM TERMINAL</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-text'>INSTITUTIONAL ICT EXECUTION ENGINE • AUTOMATED WIN-RATE JOURNAL</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-text'>INSTITUTIONAL ICT EXECUTION ENGINE • ADVANCED ANALYTICS & RISK ENGINE</div>", unsafe_allow_html=True)
 
 api_key = st.secrets.get("GEMINI_API_KEY")
 if not api_key:
@@ -155,6 +144,13 @@ if not api_key:
 client = genai.Client(api_key=api_key)
 
 with st.sidebar:
+    st.markdown("### 🛡️ RISK MANAGEMENT ENGINE")
+    account_size = st.number_input("ACCOUNT EQUITY ($):", value=10000, step=1000)
+    risk_pct = st.slider("RISK PER TRADE (%):", 0.25, 2.0, 1.0, 0.25)
+    risk_dollars = account_size * (risk_pct / 100)
+    st.caption(f"MAX RISK PER TRADE: **${risk_dollars:.2f}**")
+    st.divider()
+
     st.markdown("### 📊 WIN-RATE DASHBOARD")
     df_trades = get_trades_df()
     
@@ -167,8 +163,19 @@ with st.sidebar:
     st.metric("TOTAL TRADES", total_trades)
     st.metric("WIN RATE", f"{win_rate}%")
     st.write(f"🟢 **Wins:** {wins} | 🔴 **Losses:** {losses}")
-    st.divider()
 
+    # Plot Equity Curve
+    if completed > 0:
+        df_completed = df_trades[df_trades['status'].isin(['WIN', 'LOSS'])].copy()
+        df_completed['pnl'] = df_completed['status'].apply(lambda x: risk_dollars * 3 if x == 'WIN' else -risk_dollars)
+        df_completed['equity'] = account_size + df_completed['pnl'].cumsum()
+        
+        fig = px.line(df_completed, x=df_completed.index, y='equity', title='ACCOUNT EQUITY CURVE ($)', template='plotly_dark')
+        fig.update_traces(line_color='#00F0FF')
+        fig.update_layout(height=200, margin=dict(l=10, r=10, t=30, b=10))
+        st.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
     st.markdown("### 📝 PENDING TRADES")
     pending_trades = df_trades[df_trades['status'] == 'PENDING']
     
@@ -187,7 +194,7 @@ with st.sidebar:
     else:
         st.info("No active trades pending outcome.")
 
-# 5. Control Bar & Live Price Sync
+# 5. Asset Setup & Live Price Sync
 ASSET_MAP = {
     "🥇 XAUUSD (Gold)": "GC=F",
     "📊 US30 (Dow Jones)": "^DJI",
@@ -251,12 +258,12 @@ if htf_file and ltf_file:
     st.image([img_htf, img_ltf], caption=["Higher Timeframe Bias", "Lower Timeframe Execution Trigger"], use_container_width=True)
 
     if st.button("RUN QUANTUM PRECISION ANALYSIS"):
-        with st.spinner("CALCULATING ICT CONFLUENCE & EXECUTING SIGNAL..."):
+        with st.spinner("ANALYZING ICT CONFLUENCE & CALCULATING LOT SIZES..."):
             
             sys_inst = f"""
             You are RIOS 2.0, an institutional ICT engine for {asset_choice}.
-            Session: {session_choice}. Price Ref: {live_price_str}.
-            Provide clear levels for Direction, Entry, Stop Loss, and Take Profit.
+            Session: {session_choice}. Price Ref: {live_price_str}. Max Dollar Risk: ${risk_dollars:.2f}.
+            Provide clear levels for Direction, Entry, Stop Loss, Take Profit, and recommended Lot Size for ${risk_dollars:.2f} risk.
             """
 
             user_prompt = f"""
@@ -268,12 +275,20 @@ if htf_file and ltf_file:
 
             ---
 
-            ### 🎯 EXECUTION PARAMETERS
+            ### 🎯 EXECUTION & RISK PARAMETERS
             * **Entry Zone:** [Price Level]
             * **Stop Loss (SL):** [Price Level]
-            * **Take Profit 1 (TP1):** [Price Level]
-            * **Take Profit 2 (Target TP):** [Price Level]
-            * **Calculated R:R:** [e.g., 1:3.5]
+            * **Take Profit (TP):** [Price Level]
+            * **Recommended Lot Size:** [e.g. 0.50 Lots for ${risk_dollars:.2f} risk]
+            * **Calculated R:R Ratio:** [e.g. 1:3.5]
+
+            ---
+
+            ### 📊 CONFLUENCE CHECKLIST
+            * [ ] HTF Order Block / FVG Alignment
+            * [ ] LTF Liquidity Sweep (BSL/SSL Purged)
+            * [ ] Market Structure Shift (MSS / CHoCH)
+            * [ ] Killzone Timing Match
             """
 
             try:
@@ -286,23 +301,23 @@ if htf_file and ltf_file:
             except Exception as e:
                 st.error(f"Execution Error: {e}")
 
-# 7. Trade Logger Form
+# 7. Journal Logging Form
 st.divider()
 st.markdown("### 📥 JOURNAL LOG ENTRY")
 
 with st.form("trade_logger_form"):
     c1, c2, c3, c4, c5 = st.columns(5)
-    in_asset = c1.text_input("Asset", value=st.session_state.log_asset)
-    in_dir = c2.selectbox("Direction", ["BUY", "SELL"], index=0 if st.session_state.log_dir == "BUY" else 1)
-    in_entry = c3.text_input("Entry Price", value=st.session_state.log_entry)
-    in_sl = c4.text_input("Stop Loss", value=st.session_state.log_sl)
-    in_tp = c5.text_input("Take Profit", value=st.session_state.log_tp)
+    in_asset = c1.text_input("Asset", value="XAUUSD")
+    in_dir = c2.selectbox("Direction", ["BUY", "SELL"])
+    in_entry = c3.text_input("Entry Price")
+    in_sl = c4.text_input("Stop Loss")
+    in_tp = c5.text_input("Take Profit")
     
     submit_log = st.form_submit_button("⚡ COMMIT TRADE TO JOURNAL")
     if submit_log:
         if in_entry and in_sl and in_tp:
             log_trade(in_asset, in_dir, in_entry, in_sl, in_tp)
-            st.success("Trade recorded to database! Check the sidebar to mark as WIN or LOSS.")
+            st.success("Trade recorded! Update the outcome in the sidebar to plot your live equity curve.")
             st.rerun()
         else:
             st.warning("Please specify Entry, Stop Loss, and Take Profit levels.")
