@@ -2,7 +2,6 @@ import streamlit as st
 import time
 import sqlite3
 import pandas as pd
-import plotly.express as px
 from google import genai
 from google.genai import types
 from PIL import Image
@@ -164,16 +163,13 @@ with st.sidebar:
     st.metric("WIN RATE", f"{win_rate}%")
     st.write(f"🟢 **Wins:** {wins} | 🔴 **Losses:** {losses}")
 
-    # Plot Equity Curve
+    # Plot Native Streamlit Equity Line Chart
     if completed > 0:
         df_completed = df_trades[df_trades['status'].isin(['WIN', 'LOSS'])].copy()
         df_completed['pnl'] = df_completed['status'].apply(lambda x: risk_dollars * 3 if x == 'WIN' else -risk_dollars)
-        df_completed['equity'] = account_size + df_completed['pnl'].cumsum()
-        
-        fig = px.line(df_completed, x=df_completed.index, y='equity', title='ACCOUNT EQUITY CURVE ($)', template='plotly_dark')
-        fig.update_traces(line_color='#00F0FF')
-        fig.update_layout(height=200, margin=dict(l=10, r=10, t=30, b=10))
-        st.plotly_chart(fig, use_container_width=True)
+        df_completed['Equity ($)'] = account_size + df_completed['pnl'].cumsum()
+        st.markdown("**ACCOUNT EQUITY CURVE**")
+        st.line_chart(df_completed['Equity ($)'])
 
     st.divider()
     st.markdown("### 📝 PENDING TRADES")
